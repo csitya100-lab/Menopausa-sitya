@@ -18,6 +18,7 @@ export interface DailyLog {
 export interface UserProfile {
   name: string;
   isOnboarded: boolean;
+  theme: 'light' | 'dark'; // New theme property
   
   // 1. Biológico
   age: number;
@@ -57,6 +58,7 @@ export enum Tab {
 export const INITIAL_PROFILE: UserProfile = {
   name: '',
   isOnboarded: false,
+  theme: 'light',
   age: 45,
   lastPeriodDate: '',
   surgicalHistory: [],

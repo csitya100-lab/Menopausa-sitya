@@ -71,8 +71,8 @@ export const Dashboard: React.FC<Props> = ({ state }) => {
 
   if (logs.length === 0) {
     return (
-      <div className="text-center p-10 text-stone-500">
-        <Activity className="w-12 h-12 mx-auto mb-4 text-stone-300" />
+      <div className="text-center p-10 text-stone-500 dark:text-stone-400">
+        <Activity className="w-12 h-12 mx-auto mb-4 text-stone-300 dark:text-stone-600" />
         <p>Ainda não há registros. Faça seu primeiro check-in!</p>
       </div>
     );
@@ -81,21 +81,21 @@ export const Dashboard: React.FC<Props> = ({ state }) => {
   return (
     <div className="space-y-6">
       {/* Calendar View (Simplified) */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+      <div className="bg-white dark:bg-stone-800 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700">
         <div className="flex items-center gap-2 mb-4">
           <CalendarIcon className="text-rose-500 w-5 h-5" />
-          <h3 className="font-bold text-stone-700">Visão Mensal</h3>
+          <h3 className="font-bold text-stone-700 dark:text-stone-200">Visão Mensal</h3>
         </div>
         <div className="grid grid-cols-7 gap-1">
           {['D','S','T','Q','Q','S','S'].map((d, i) => (
-            <div key={i} className="text-xs text-center text-stone-400 font-bold">{d}</div>
+            <div key={i} className="text-xs text-center text-stone-400 dark:text-stone-500 font-bold">{d}</div>
           ))}
           {/* Render last 28 placeholders + actual data mapped roughly */}
           {Array.from({ length: 28 }).map((_, i) => {
              // Mocking calendar days for UI viz logic - in real app would use date-fns
              const dayLog = logs[logs.length - (28 - i)];
              return (
-               <div key={i} className="aspect-square rounded-lg flex items-center justify-center relative bg-stone-50">
+               <div key={i} className="aspect-square rounded-lg flex items-center justify-center relative bg-stone-50 dark:bg-stone-900/50">
                   {dayLog && (
                     <div 
                       className={`w-3/4 h-3/4 rounded-full flex items-center justify-center text-[10px] font-bold text-white
@@ -109,7 +109,7 @@ export const Dashboard: React.FC<Props> = ({ state }) => {
              )
           })}
         </div>
-        <div className="flex gap-4 mt-4 text-xs justify-center text-stone-500">
+        <div className="flex gap-4 mt-4 text-xs justify-center text-stone-500 dark:text-stone-400">
            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-teal-400"></div> Ótimo</span>
            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400"></div> Normal</span>
            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-rose-500"></div> Difícil</span>
@@ -117,16 +117,16 @@ export const Dashboard: React.FC<Props> = ({ state }) => {
       </div>
 
       {/* Symptom Frequency Chart */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
+      <div className="bg-white dark:bg-stone-800 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="text-teal-500 w-5 h-5" />
-          <h3 className="font-bold text-stone-700">Intensidade dos Sintomas (14 dias)</h3>
+          <h3 className="font-bold text-stone-700 dark:text-stone-200">Intensidade dos Sintomas (14 dias)</h3>
         </div>
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <XAxis dataKey="date" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{fill: '#f5f5f4'}} />
+              <XAxis dataKey="date" tick={{fontSize: 10, fill: '#a8a29e'}} axisLine={false} tickLine={false} />
+              <Tooltip cursor={{fill: 'rgba(255,255,255,0.1)'}} contentStyle={{ backgroundColor: '#1c1917', border: 'none', color: '#fff', borderRadius: '8px' }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={getMoodColor(entry.mood)} />
@@ -138,15 +138,15 @@ export const Dashboard: React.FC<Props> = ({ state }) => {
       </div>
 
       {/* AI Coach */}
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-2xl border border-indigo-100">
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
         <div className="flex items-center gap-2 mb-3">
-          <Brain className="text-indigo-500 w-6 h-6" />
-          <h3 className="font-bold text-indigo-900">Coach Virtual</h3>
+          <Brain className="text-indigo-500 dark:text-indigo-400 w-6 h-6" />
+          <h3 className="font-bold text-indigo-900 dark:text-indigo-200">Coach Virtual</h3>
         </div>
         
         {!aiInsight ? (
           <div className="text-center py-2">
-            <p className="text-indigo-700 text-sm mb-3">
+            <p className="text-indigo-700 dark:text-indigo-300 text-sm mb-3">
               Analise seus padrões da última semana e receba uma dica personalizada.
             </p>
             <Button 
@@ -154,14 +154,14 @@ export const Dashboard: React.FC<Props> = ({ state }) => {
               size="sm" 
               onClick={generateInsight}
               disabled={aiLoading}
-              className="bg-indigo-500 hover:bg-indigo-600 shadow-indigo-200 text-white w-full"
+              className="bg-indigo-500 hover:bg-indigo-600 shadow-indigo-200 dark:shadow-none text-white w-full border-none"
             >
               {aiLoading ? 'Pensando...' : '✨ Gerar Insight'}
             </Button>
           </div>
         ) : (
-          <div className="animate-fade-in bg-white/60 p-4 rounded-xl">
-             <p className="text-indigo-800 text-sm leading-relaxed italic">"{aiInsight}"</p>
+          <div className="animate-fade-in bg-white/60 dark:bg-stone-900/60 p-4 rounded-xl">
+             <p className="text-indigo-800 dark:text-indigo-200 text-sm leading-relaxed italic">"{aiInsight}"</p>
              <button onClick={() => setAiInsight(null)} className="text-xs text-indigo-400 mt-2 underline">Novo insight</button>
           </div>
         )}

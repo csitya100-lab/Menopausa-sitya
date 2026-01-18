@@ -8,7 +8,12 @@ export const loadState = (): AppState => {
     if (!serialized) {
       return { profile: INITIAL_PROFILE, logs: {} };
     }
-    return JSON.parse(serialized);
+    const parsed = JSON.parse(serialized);
+    // Merge loaded profile with INITIAL_PROFILE to ensure new fields (like theme) are present
+    return {
+      ...parsed,
+      profile: { ...INITIAL_PROFILE, ...parsed.profile }
+    };
   } catch (e) {
     console.error('Failed to load state', e);
     return { profile: INITIAL_PROFILE, logs: {} };
