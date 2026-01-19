@@ -41,6 +41,7 @@ export const DailyCheckIn: React.FC<Props> = ({ date, existingLog, onSave }) => 
       medicationTaken: meds,
       notes,
       timestamp: Date.now(),
+      timeline: existingLog?.timeline || [], // Preserve existing timeline
     });
   };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile } from '../types';
+import { UserProfile, INITIAL_PROFILE } from '../types';
 import { Button } from './Button';
 import { Heart, User, Calendar, Briefcase, ChevronRight, Activity, Users, Smile } from 'lucide-react';
 
@@ -9,21 +9,7 @@ interface Props {
 
 export const Onboarding: React.FC<Props> = ({ onComplete }) => {
   const [step, setStep] = useState(0); // 0 = Intro, 1-5 = Questions, 6 = Finish
-  const [data, setData] = useState<UserProfile>({
-    name: '',
-    age: 45,
-    lastPeriodDate: '',
-    surgicalHistory: [],
-    maritalStatus: '',
-    occupation: '',
-    hrtStatus: 'none',
-    menopausePerception: '',
-    supportNetwork: 'partial',
-    bodyImageFeeling: '',
-    goals: [],
-    isOnboarded: false,
-    theme: 'light',
-  });
+  const [data, setData] = useState<UserProfile>({ ...INITIAL_PROFILE });
 
   const update = (field: keyof UserProfile, value: any) => {
     setData(prev => ({ ...prev, [field]: value }));

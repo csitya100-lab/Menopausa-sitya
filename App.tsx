@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { loadState, saveLog, saveProfile, clearData } from './services/storage';
-import { AppState, DailyLog, Tab } from './types';
+import { AppState, DailyLog, Tab, INITIAL_PROFILE } from './types';
 import { Onboarding } from './components/Onboarding';
 import { DailyCheckIn } from './components/DailyCheckIn';
 import { Dashboard } from './components/Dashboard';
 import { Report } from './components/Report';
+import { Calendar } from './components/Calendar';
+import { Chat } from './components/Chat';
 import { EDUCATION_CONTENT } from './constants';
-import { Home, BookOpen, BarChart2, FileText, Settings, PlusCircle, X, LogOut, ChevronRight, Moon, Sun } from 'lucide-react';
+import { Home, BookOpen, BarChart2, FileText, Settings, PlusCircle, X, LogOut, Moon, Sun, Thermometer, Brain, Battery, Zap, Droplets, Bell, Clock, Calendar as CalendarIcon, CheckCircle2, ChevronDown, MessageCircle, ExternalLink } from 'lucide-react';
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(loadState());
@@ -16,11 +18,48 @@ const App: React.FC = () => {
   
   // Today's date YYYY-MM-DD
   const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(today);
 
   useEffect(() => {
-    // Basic permissions logic for notifications (User request)
-    if ('Notification' in window && Notification.permission === 'default') {
-      // We don't force it, accessible via settings
+    // Check Smart Notifications on App Load
+    const checkSmartNotifications = () => {
+      const { notifications } = state.profile;
+      // Guard clause for undefined notifications
+      if (!notifications || !notifications.enabled || Notification.permission !== 'granted') return;
+
+      // Logic 1: Inactivity Check
+      if (notifications.reminderTypes?.inactivity) {
+        const dates = Object.keys(state.logs).sort();
+        if (dates.length > 0) {
+          const lastLog = new Date(dates[dates.length - 1]);
+          const diffTime = Math.abs(new Date().getTime() - lastLog.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+          if (diffDays > 3) {
+            new Notification('Senti sua falta! 🌸', {
+              body: `Faz ${diffDays} dias que não temos notícias. Como você está se sentindo hoje?`,
+              icon: '/icon.png' // Assuming standard icon path
+            });
+          }
+        }
+      }
+
+      // Logic 2: Medication Check (Simple simulation based on time)
+      if (notifications.reminderTypes?.medicationCheck && state.profile.hrtStatus !== 'none') {
+        const now = new Date();
+        const reminderTime = parseInt(notifications.dailyTime.split(':')[0]);
+        // If it's 2 hours after reminder time
+        if (now.getHours() === reminderTime + 2) {
+           // This would ideally be a service worker, but works if app is open
+           new Notification('Acompanhamento HRT', {
+              body: 'Notou alguma mudança 2h após sua medicação?',
+           });
+        }
+      }
+    };
+
+    if ('Notification' in window && state.profile.notifications?.enabled) {
+      checkSmartNotifications();
     }
   }, []);
 
@@ -44,11 +83,125 @@ const App: React.FC = () => {
     setShowCheckInModal(false);
   };
 
+  const handleOpenCheckIn = (date: string = today) => {
+    setSelectedDate(date);
+    setShowCheckInModal(true);
+  };
+
+  const quickSymptoms = [
+    { id: 'hot_flash', label: 'Calores', icon: <Thermometer className="w-6 h-6" /> },
+    { id: 'anxiety', label: 'Ansiedade', icon: <Brain className="w-6 h-6" /> },
+    { id: 'insomnia', label: 'Insônia', icon: <Moon className="w-6 h-6" /> },
+    { id: 'fatigue', label: 'Fadiga', icon: <Battery className="w-6 h-6" /> },
+    { id: 'headache', label: 'Dor Cabeça', icon: <Zap className="w-6 h-6" /> },
+    { id: 'bloating', label: 'Inchaço', icon: <Droplets className="w-6 h-6" /> },
+  ];
+
+  // Quick Symptom Logic
+  const toggleQuickSymptom = (symptomId: string) => {
+    const currentLog = state.logs[today];
+    let newLog: DailyLog;
+
+    if (currentLog) {
+      const hasSymptom = currentLog.symptoms.includes(symptomId);
+      let newSymptoms: string[];
+      let newTimeline = currentLog.timeline ? [...currentLog.timeline] : [];
+
+      if (hasSymptom) {
+        // Toggle OFF: Remove from symptoms list and remove ALL occurrences from timeline for today
+        newSymptoms = currentLog.symptoms.filter(id => id !== symptomId);
+        newTimeline = newTimeline.filter(event => event.id !== symptomId);
+      } else {
+        // Toggle ON: Add to symptoms list and add event to timeline
+        newSymptoms = [...currentLog.symptoms, symptomId];
+        newTimeline.push({ id: symptomId, timestamp: Date.now() });
+      }
+      
+      newLog = { ...currentLog, symptoms: newSymptoms, timeline: newTimeline };
+    } else {
+      // Create new log if none exists
+      newLog = {
+        date: today,
+        mood: 'normal',
+        symptoms: [symptomId],
+        medicationTaken: false,
+        notes: '',
+        timestamp: Date.now(),
+        timeline: [{ id: symptomId, timestamp: Date.now() }]
+      };
+    }
+    handleSaveLog(newLog);
+  };
+
   const toggleTheme = () => {
     const newTheme = state.profile.theme === 'light' ? 'dark' : 'light';
     const newState = saveProfile({ ...state.profile, theme: newTheme });
     setState(newState);
   };
+
+  // Notification Handlers
+  const toggleNotifications = async () => {
+    const currentEnabled = state.profile.notifications?.enabled ?? false;
+    const isEnabled = !currentEnabled;
+    
+    if (isEnabled && 'Notification' in window) {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('Precisamos da sua permissão para enviar lembretes.');
+        return;
+      }
+    }
+
+    const newProfile = {
+      ...state.profile,
+      notifications: {
+        ...INITIAL_PROFILE.notifications, // Ensure structure exists
+        ...state.profile.notifications, // Merge existing settings
+        enabled: isEnabled
+      }
+    };
+    const newState = saveProfile(newProfile);
+    setState(newState);
+  };
+
+  const updateNotificationTime = (time: string) => {
+    const newProfile = {
+      ...state.profile,
+      notifications: {
+        ...INITIAL_PROFILE.notifications,
+        ...state.profile.notifications,
+        dailyTime: time
+      }
+    };
+    const newState = saveProfile(newProfile);
+    setState(newState);
+  };
+
+  const updateReminderType = (type: keyof typeof state.profile.notifications.reminderTypes, value: boolean) => {
+    const currentNotifications = state.profile.notifications || INITIAL_PROFILE.notifications;
+    
+    const newProfile = {
+      ...state.profile,
+      notifications: {
+        ...currentNotifications,
+        reminderTypes: {
+          ...currentNotifications.reminderTypes,
+          [type]: value
+        }
+      }
+    };
+    const newState = saveProfile(newProfile);
+    setState(newState);
+  };
+
+  const updateProfileData = (field: string, value: any) => {
+    const newProfile = {
+      ...state.profile,
+      [field]: value
+    };
+    const newState = saveProfile(newProfile);
+    setState(newState);
+  }
 
   const DisclaimerFooter = () => (
     <div className="mt-8 mb-4 text-center space-y-2">
@@ -65,6 +218,9 @@ const App: React.FC = () => {
   if (!state.profile.isOnboarded) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
+
+  // Safe access helper for settings UI
+  const notifSettings = state.profile.notifications || INITIAL_PROFILE.notifications;
 
   // Helper to render content based on tabs
   const renderContent = () => {
@@ -93,7 +249,7 @@ const App: React.FC = () => {
                 <h2 className="text-xl font-bold mb-2">Como você está hoje?</h2>
                 <p className="mb-4 text-rose-50">Registre seus sintomas e ajude a identificar padrões.</p>
                 <button 
-                  onClick={() => setShowCheckInModal(true)}
+                  onClick={() => handleOpenCheckIn(today)}
                   className="bg-white text-rose-500 px-5 py-2 rounded-xl font-bold hover:bg-rose-50 transition-colors w-full"
                 >
                   Fazer Check-in
@@ -106,11 +262,77 @@ const App: React.FC = () => {
                 </h2>
                 <p className="text-sm text-teal-600 dark:text-teal-400 mb-3">Você registrou {todayLog.symptoms.length} sintomas hoje.</p>
                 <button 
-                   onClick={() => setShowCheckInModal(true)}
+                   onClick={() => handleOpenCheckIn(today)}
                    className="text-sm underline font-medium hover:text-teal-900 dark:hover:text-teal-100"
                 >
                   Editar registro
                 </button>
+              </div>
+            )}
+
+            {/* Quick Symptoms Grid */}
+            <div>
+              <h3 className="font-bold text-stone-700 dark:text-stone-200 mb-3 px-1 flex items-center justify-between">
+                <span>Registro Rápido</span>
+                <span className="text-[10px] bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Comuns</span>
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {quickSymptoms.map(s => {
+                  const isActive = state.logs[today]?.symptoms.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => toggleQuickSymptom(s.id)}
+                      className={`p-4 rounded-2xl flex flex-col items-center justify-center gap-2 transition-all duration-200 border ${
+                        isActive 
+                          ? 'bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-200 dark:shadow-none transform scale-105'
+                          : 'bg-white dark:bg-stone-800 border-stone-100 dark:border-stone-700 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-700'
+                      }`}
+                    >
+                      {s.icon}
+                      <span className="text-xs font-bold">{s.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Timeline */}
+            {todayLog?.timeline && todayLog.timeline.length > 0 && (
+              <div className="mb-2">
+                <h3 className="font-bold text-stone-700 dark:text-stone-200 mb-3 px-1 text-sm">Linha do Tempo (Hoje)</h3>
+                <div className="relative h-16 bg-stone-100 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
+                  <div className="absolute inset-0 flex justify-between px-2 pt-1 z-0">
+                      <span className="text-[10px] text-stone-400">00h</span>
+                      <span className="text-[10px] text-stone-400">12h</span>
+                      <span className="text-[10px] text-stone-400">24h</span>
+                  </div>
+                  <div className="absolute top-8 left-3 right-3 h-0.5 bg-stone-200 dark:bg-stone-600 rounded"></div>
+                  
+                  {todayLog.timeline.map((event, idx) => {
+                      // Calculate position based on time of day (0-24h)
+                      const now = new Date();
+                      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                      // If timestamp is not today, it might look weird, but assuming quick log is for today.
+                      // Clamp between 0% and 100%
+                      const position = Math.max(0, Math.min(100, ((event.timestamp - startOfDay) / (24 * 60 * 60 * 1000)) * 100));
+                      
+                      const symptom = quickSymptoms.find(s => s.id === event.id) || { icon: <div className="w-2 h-2 bg-rose-500 rounded-full"/>, label: '' };
+
+                      return (
+                          <div 
+                            key={idx}
+                            className="absolute top-5 transform -translate-x-1/2 flex flex-col items-center group cursor-pointer z-10"
+                            style={{ left: `${position}%` }}
+                            title={`${new Date(event.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${symptom.label || event.id}`}
+                          >
+                            <div className="p-1.5 bg-white dark:bg-stone-700 rounded-full shadow-sm border border-rose-200 dark:border-rose-900/50 hover:scale-125 transition-transform">
+                                {React.cloneElement(symptom.icon as React.ReactElement, { className: "w-3 h-3 text-rose-500" })}
+                            </div>
+                          </div>
+                      );
+                  })}
+                </div>
               </div>
             )}
 
@@ -139,28 +361,16 @@ const App: React.FC = () => {
         return (
           <div className="animate-fade-in pb-20">
             <h2 className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6">Seu Histórico</h2>
-            <Dashboard state={state} />
-            <div className="mt-8">
-              <h3 className="font-bold text-stone-700 dark:text-stone-300 mb-4">Registros Anteriores</h3>
-              <div className="space-y-3">
-                 {(Object.values(state.logs) as DailyLog[])
-                   .sort((a,b) => b.date.localeCompare(a.date))
-                   .map(log => (
-                     <div key={log.date} className="bg-white dark:bg-stone-800 p-4 rounded-xl border border-stone-100 dark:border-stone-700 flex justify-between items-center">
-                        <div>
-                          <div className="font-bold text-stone-800 dark:text-stone-200">{new Date(log.date).toLocaleDateString('pt-BR')}</div>
-                          <div className="text-xs text-stone-500 dark:text-stone-400 capitalize">{log.mood} • {log.symptoms.length} sintomas</div>
-                        </div>
-                        <button 
-                          onClick={() => { setShowCheckInModal(true); /* Logic to edit past would go here, simplified for now to just today */ }}
-                          className="text-stone-300 dark:text-stone-600 hover:text-rose-500 dark:hover:text-rose-400"
-                        >
-                          <ChevronRight className="w-5 h-5" />
-                        </button>
-                     </div>
-                   ))}
-              </div>
+            <div className="mb-8">
+              <Calendar 
+                logs={state.logs} 
+                onDateSelect={handleOpenCheckIn} 
+              />
             </div>
+            
+            <h3 className="font-bold text-stone-700 dark:text-stone-300 mb-4 px-1">Resumo de Sintomas</h3>
+            <Dashboard state={state} />
+            
             <DisclaimerFooter />
           </div>
         );
@@ -171,12 +381,22 @@ const App: React.FC = () => {
             <h2 className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-6">Biblioteca</h2>
             <div className="space-y-4">
               {EDUCATION_CONTENT.map((item, idx) => (
-                <div key={idx} className="bg-white dark:bg-stone-800 p-5 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700 hover:shadow-md transition-shadow">
+                <div key={idx} className="bg-white dark:bg-stone-800 p-5 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-700 hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="p-2 bg-stone-50 dark:bg-stone-700 rounded-lg">{item.icon}</div>
                     <h3 className="font-bold text-stone-800 dark:text-stone-100 text-lg">{item.title}</h3>
                   </div>
                   <p className="text-stone-600 dark:text-stone-300 leading-relaxed">{item.content}</p>
+                  {(item as any).sourceUrl && (
+                    <a 
+                      href={(item as any).sourceUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-4 text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                    >
+                      Ler mais na fonte oficial <ExternalLink size={14} />
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -191,6 +411,16 @@ const App: React.FC = () => {
         return (
           <div className="animate-fade-in pb-20">
             <Report state={state} />
+          </div>
+        );
+
+      case Tab.CHAT:
+        return (
+          <div className="animate-fade-in pb-20 h-full">
+            <h2 className="text-2xl font-bold text-stone-800 dark:text-stone-100 mb-4">Especialista Virtual</h2>
+            <div className="h-full bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm overflow-hidden">
+               <Chat state={state} />
+            </div>
           </div>
         );
       
@@ -218,31 +448,134 @@ const App: React.FC = () => {
                </div>
             </div>
 
+            {/* Smart Notifications Config */}
             <div className="bg-white dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
                <div className="p-4 border-b border-stone-100 dark:border-stone-700">
-                 <p className="font-bold text-stone-700 dark:text-stone-200">Seus Dados</p>
-                 <p className="text-sm text-stone-500">Editável no perfil completo</p>
+                 <div className="flex items-center gap-2">
+                   <Bell className="w-5 h-5 text-rose-500" />
+                   <div>
+                     <p className="font-bold text-stone-700 dark:text-stone-200">Notificações Inteligentes</p>
+                     <p className="text-xs text-stone-500">Gerenciar lembretes</p>
+                   </div>
+                 </div>
                </div>
-               <div className="p-4 bg-stone-50 dark:bg-stone-900/50 text-sm text-stone-600 dark:text-stone-300 space-y-2">
-                 <p>Nome: {state.profile.name}</p>
-                 <p>Terapia: {state.profile.hrtStatus}</p>
+               
+               <div className="p-4 space-y-5">
+                 {/* Master Toggle */}
+                 <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Ativar Notificações</span>
+                    <button 
+                      onClick={toggleNotifications}
+                      className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${notifSettings.enabled ? 'bg-teal-500' : 'bg-stone-300 dark:bg-stone-600'}`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 shadow-sm ${notifSettings.enabled ? 'translate-x-6' : ''}`} />
+                    </button>
+                 </div>
+
+                 {notifSettings.enabled && (
+                   <div className="animate-fade-in space-y-5 pt-2 border-t border-stone-100 dark:border-stone-700">
+                     {/* Time Picker */}
+                     <label className="block">
+                       <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block mb-2">Horário do Check-in</span>
+                       <div className="flex items-center gap-3">
+                          <Clock className="w-4 h-4 text-stone-400" />
+                          <input 
+                            type="time" 
+                            value={notifSettings.dailyTime}
+                            onChange={(e) => updateNotificationTime(e.target.value)}
+                            className="bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg p-2 text-sm text-stone-800 dark:text-stone-200 focus:ring-rose-500 focus:border-rose-500"
+                          />
+                       </div>
+                     </label>
+
+                     {/* Smart Toggles */}
+                     <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-stone-50 dark:bg-stone-900/50">
+                          <div className="flex items-center gap-3">
+                             <CalendarIcon className="w-4 h-4 text-teal-500" />
+                             <div>
+                               <p className="text-sm font-medium text-stone-700 dark:text-stone-200">Lembrete Diário</p>
+                               <p className="text-xs text-stone-400">Para registrar sintomas</p>
+                             </div>
+                          </div>
+                          <button onClick={() => updateReminderType('daily', !notifSettings.reminderTypes.daily)} className={`w-5 h-5 rounded border flex items-center justify-center ${notifSettings.reminderTypes.daily ? 'bg-teal-500 border-teal-500' : 'border-stone-300 dark:border-stone-600'}`}>
+                              {notifSettings.reminderTypes.daily && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-stone-50 dark:bg-stone-900/50">
+                          <div className="flex items-center gap-3">
+                             <Brain className="w-4 h-4 text-purple-500" />
+                             <div>
+                               <p className="text-sm font-medium text-stone-700 dark:text-stone-200">Resgate de Hábito</p>
+                               <p className="text-xs text-stone-400">Lembrar após 3 dias ausente</p>
+                             </div>
+                          </div>
+                          <button onClick={() => updateReminderType('inactivity', !notifSettings.reminderTypes.inactivity)} className={`w-5 h-5 rounded border flex items-center justify-center ${notifSettings.reminderTypes.inactivity ? 'bg-teal-500 border-teal-500' : 'border-stone-300 dark:border-stone-600'}`}>
+                              {notifSettings.reminderTypes.inactivity && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </button>
+                        </div>
+
+                        {state.profile.hrtStatus !== 'none' && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-stone-50 dark:bg-stone-900/50">
+                            <div className="flex items-center gap-3">
+                               <PlusCircle className="w-4 h-4 text-rose-500" />
+                               <div>
+                                 <p className="text-sm font-medium text-stone-700 dark:text-stone-200">Check de Medicação</p>
+                                 <p className="text-xs text-stone-400">Acompanhar efeitos pós-uso</p>
+                               </div>
+                            </div>
+                            <button onClick={() => updateReminderType('medicationCheck', !notifSettings.reminderTypes.medicationCheck)} className={`w-5 h-5 rounded border flex items-center justify-center ${notifSettings.reminderTypes.medicationCheck ? 'bg-teal-500 border-teal-500' : 'border-stone-300 dark:border-stone-600'}`}>
+                                {notifSettings.reminderTypes.medicationCheck && <CheckCircle2 className="w-3 h-3 text-white" />}
+                            </button>
+                          </div>
+                        )}
+                     </div>
+                   </div>
+                 )}
                </div>
             </div>
 
             <div className="bg-white dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
-               <button 
-                  className="w-full p-4 text-left hover:bg-stone-50 dark:hover:bg-stone-700/50 flex items-center justify-between"
-                  onClick={() => {
-                    if ('Notification' in window) {
-                      Notification.requestPermission().then(p => {
-                        if(p === 'granted') alert('Lembretes ativados! (Simulação)');
-                      });
-                    }
-                  }}
-               >
-                 <span className="font-medium text-stone-700 dark:text-stone-200">Ativar Lembretes Diários</span>
-                 <span className="text-rose-500 text-sm font-bold">Configurar</span>
-               </button>
+               <div className="p-4 border-b border-stone-100 dark:border-stone-700">
+                 <p className="font-bold text-stone-700 dark:text-stone-200">Seus Dados</p>
+                 <p className="text-sm text-stone-500">Configurações clínicas</p>
+               </div>
+               <div className="p-4 space-y-4">
+                 <div className="bg-stone-50 dark:bg-stone-900/50 p-3 rounded-lg text-sm text-stone-600 dark:text-stone-300 space-y-1">
+                   <p><span className="font-bold">Nome:</span> {state.profile.name}</p>
+                 </div>
+
+                 {/* HRT Configuration */}
+                 <div className="space-y-3">
+                   <label className="block text-sm font-medium text-stone-700 dark:text-stone-200">Terapia Hormonal (TRH)</label>
+                   <select 
+                      value={state.profile.hrtStatus}
+                      onChange={(e) => updateProfileData('hrtStatus', e.target.value)}
+                      className="w-full rounded-lg border-stone-300 dark:border-stone-600 bg-stone-50 dark:bg-stone-900/50 p-2.5 text-sm dark:text-white"
+                   >
+                     <option value="none">Não faço uso</option>
+                     <option value="systemic">Sistêmica (Gel/Pílula/Adesivo)</option>
+                     <option value="local">Local (Creme vaginal)</option>
+                     <option value="phyto">Fitoterápicos</option>
+                   </select>
+
+                   {state.profile.hrtStatus !== 'none' && (
+                     <div className="animate-fade-in pl-2 border-l-2 border-rose-500 ml-1">
+                       <label className="block text-xs font-bold text-stone-500 dark:text-stone-400 mb-1">Início do tratamento</label>
+                       <div className="relative">
+                          <input 
+                            type="date"
+                            value={state.profile.hrtStartDate || ''}
+                            onChange={(e) => updateProfileData('hrtStartDate', e.target.value)}
+                            className="w-full rounded-lg border-stone-300 dark:border-stone-600 bg-stone-50 dark:bg-stone-900/50 p-2 text-sm dark:text-white"
+                          />
+                          <p className="text-[10px] text-stone-400 mt-1">Usado para comparar seus sintomas antes e depois.</p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
             </div>
 
             <div className="pt-10">
@@ -298,7 +631,7 @@ const App: React.FC = () => {
             {/* Floating FAB for Quick Add */}
             <div className="relative -top-6 px-1">
               <button 
-                onClick={() => setShowCheckInModal(true)}
+                onClick={() => handleOpenCheckIn(today)}
                 className="w-14 h-14 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/30 flex items-center justify-center transform transition-transform active:scale-90 hover:bg-rose-600"
               >
                 <PlusCircle className="w-8 h-8" />
@@ -306,11 +639,11 @@ const App: React.FC = () => {
             </div>
 
             <button 
-              onClick={() => setActiveTab(Tab.REPORT)}
-              className={`flex flex-col items-center gap-1 flex-1 ${activeTab === Tab.REPORT ? 'text-rose-500' : 'text-stone-400 dark:text-stone-500'}`}
+              onClick={() => setActiveTab(Tab.CHAT)}
+              className={`flex flex-col items-center gap-1 flex-1 ${activeTab === Tab.CHAT ? 'text-rose-500' : 'text-stone-400 dark:text-stone-500'}`}
             >
-              <FileText className="w-5 h-5" />
-              <span className="text-[9px] font-bold">Relatório</span>
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-[9px] font-bold">Chat</span>
             </button>
 
             <button 
@@ -329,15 +662,17 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white dark:bg-stone-900 w-full max-w-lg rounded-t-3xl sm:rounded-3xl h-[90vh] sm:h-auto sm:max-h-[85vh] overflow-y-auto relative animate-slide-up shadow-2xl">
             <div className="sticky top-0 bg-white/95 dark:bg-stone-900/95 backdrop-blur z-10 border-b border-stone-100 dark:border-stone-800 p-4 flex justify-between items-center">
-              <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100">Novo Registro</h2>
+              <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100">
+                {selectedDate === today ? 'Novo Registro' : `Editando: ${new Date(selectedDate).toLocaleDateString('pt-BR')}`}
+              </h2>
               <button onClick={() => setShowCheckInModal(false)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-stone-200 dark:hover:bg-stone-700">
                 <X className="w-5 h-5 text-stone-600 dark:text-stone-400" />
               </button>
             </div>
             <div className="p-4">
               <DailyCheckIn 
-                date={today} 
-                existingLog={state.logs[today]} 
+                date={selectedDate} 
+                existingLog={state.logs[selectedDate]} 
                 onSave={handleSaveLog} 
               />
             </div>
@@ -362,8 +697,3 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-const rootElement = document.getElementById('root');
-if (!rootElement) throw new Error('Failed to find the root element');
-const root = createRoot(rootElement);
-root.render(<App />);
