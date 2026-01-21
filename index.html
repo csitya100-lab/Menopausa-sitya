@@ -37,34 +37,10 @@
     </script>
     <style>
       body { -webkit-tap-highlight-color: transparent; }
-      
       @media print {
-        @page { margin: 1cm; size: A4; }
-        body { 
-          background: white !important; 
-          color: black !important; 
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        
-        /* Hide everything that isn't the report container or is marked to hide */
-        nav, .no-print, button { display: none !important; }
-        
-        /* Reset shadows and borders for paper look */
-        .shadow-sm, .shadow-lg, .shadow-xl { box-shadow: none !important; }
-        .border, .border-stone-100, .border-stone-200 { border-color: #e5e7eb !important; }
-        
-        /* Ensure charts render nicely */
-        .recharts-responsive-container { width: 100% !important; height: 300px !important; }
-        
-        /* Typography adjustments for print */
-        h1 { font-size: 24px !important; color: #111827 !important; }
-        h2 { font-size: 18px !important; color: #374151 !important; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 12px; }
-        p, li, span { font-size: 12px !important; color: #4b5563 !important; }
-        
-        /* Force page breaks if needed */
-        .page-break { page-break-before: always; }
-        .avoid-break { page-break-inside: avoid; }
+        @page { margin: 2cm; }
+        body { background: white; }
+        .no-print { display: none !important; }
       }
     </style>
   <script type="importmap">

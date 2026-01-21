@@ -1,6 +1,6 @@
 import React from 'react';
 import { Symptom } from './types';
-import { Brain, Heart, Thermometer, Battery, Moon, Droplets, Zap, Briefcase, Utensils, Leaf } from 'lucide-react';
+import { Brain, Heart, Thermometer, Battery, Moon, Droplets, Zap } from 'lucide-react';
 
 export const SYMPTOMS_LIST: Symptom[] = [
   { id: 'hot_flash', name: 'Calores (Fogachos)', category: 'physical' },
@@ -33,44 +33,22 @@ export const EDUCATION_CONTENT = [
   {
     title: 'O que é Perimenopausa?',
     icon: <Thermometer className="w-6 h-6 text-rose-500" />,
-    content: 'É o período de transição antes da menopausa, quando os ovários começam a produzir menos estrogênio. Pode durar de 4 a 10 anos. Os sintomas são flutuantes e os ciclos menstruais tornam-se irregulares.',
-    sourceUrl: 'https://www.febrasgo.org.br/pt/noticias/item/157-climatario-e-menopausa'
+    content: 'É o período de transição antes da menopausa, quando os ovários começam a produzir menos estrogênio. Pode durar de 4 a 10 anos. Os sintomas são flutuantes e os ciclos menstruais tornam-se irregulares.'
   },
   {
     title: 'Brain Fog é real?',
     icon: <Brain className="w-6 h-6 text-teal-500" />,
-    content: 'Sim! A queda do estrogênio afeta a forma como o cérebro metaboliza energia. Esquecimentos e dificuldade de concentração são muito comuns e temporários.',
-    sourceUrl: 'https://vidasaudavel.einstein.br/nevoa-mental/'
+    content: 'Sim! A queda do estrogênio afeta a forma como o cérebro metaboliza energia. Esquecimentos e dificuldade de concentração são muito comuns e temporários.'
   },
   {
     title: 'Coração e Hormônios',
     icon: <Heart className="w-6 h-6 text-rose-500" />,
-    content: 'O estrogênio protege o sistema cardiovascular. Após a menopausa, o risco cardíaco iguala ao dos homens. Monitorar pressão e colesterol é essencial.',
-    sourceUrl: 'https://www.portal.cardiol.br/post/menopausa-aumenta-risco-de-doen%C3%A7as-cardiovasculares'
+    content: 'O estrogênio protege o sistema cardiovascular. Após a menopausa, o risco cardíaco iguala ao dos homens. Monitorar pressão e colesterol é essencial.'
   },
   {
     title: 'Sono Fragmentado',
     icon: <Moon className="w-6 h-6 text-indigo-500" />,
-    content: 'A progesterona tem efeito sedativo. Sua queda, somada aos suores noturnos, causa o "despertar da madrugada". Higiene do sono é fundamental.',
-    sourceUrl: 'https://www.absono.com.br/sono-e-saude/'
-  },
-  {
-    title: 'Carreira e Vida Social',
-    icon: <Briefcase className="w-6 h-6 text-orange-500" />,
-    content: 'Sintomas como fogachos e alterações de humor podem impactar a confiança no trabalho e relações sociais. O diálogo aberto, limites claros e pausas estratégicas são essenciais para manter o bem-estar social e profissional.',
-    sourceUrl: 'https://forbes.com.br/forbes-mulher/2023/10/menopausa-no-trabalho-como-lidar-com-os-sintomas-e-manter-a-produtividade/'
-  },
-  {
-    title: 'Nutrição e Alívio',
-    icon: <Utensils className="w-6 h-6 text-green-500" />,
-    content: 'Alimentos ricos em cálcio, vitamina D e fitoestrógenos (linhaça, soja) auxiliam no equilíbrio hormonal. Evitar excesso de cafeína, álcool e açúcar pode reduzir significativamente a intensidade dos calores.',
-    sourceUrl: 'https://bvsms.saude.gov.br/bvs/dicas/221_alimentacao_saudavel.html'
-  },
-  {
-    title: 'Mindfulness e Relaxamento',
-    icon: <Leaf className="w-6 h-6 text-teal-500" />,
-    content: 'Práticas como respiração diafragmática (técnica 4-7-8) e meditação reduzem o cortisol e a ansiedade. Dedicar 5 minutos diários ao relaxamento melhora a regulação emocional e a qualidade do sono.',
-    sourceUrl: 'https://bvsms.saude.gov.br/bvs/publicacoes/praticas_integrativas_complementares.pdf'
+    content: 'A progesterona tem efeito sedativo. Sua queda, somada aos suores noturnos, causa o "despertar da madrugada". Higiene do sono é fundamental.'
   }
 ];
 
